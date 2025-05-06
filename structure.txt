@@ -1,0 +1,31 @@
+├── environment/                           # Environment-specific configurations (per AWS account)
+│   ├── dev/                        # Development AWS Account (Account E)
+│   │   ├── main.tf                 # Calls modules for Dev
+│   │   ├── variables.tf
+│   │   ├── terraform.tfvars
+│   │   ├── backend.tf               # Defines remote state backend
+│   │   ├── networking/
+│   │   │   ├── main.tf
+│   │   │   ├── variables.tf
+│   │   │   ├── outputs.tf
+│   │   ├── compute/
+│   │   │   ├── main.tf
+│   │   │   ├── variables.tf
+│   │   │   ├── outputs.tf
+│   ├── qa/                         # QA AWS Account (Account D)
+│   ├── prod/                        # Prod AWS Account (Account C)
+│   ├── network/                     # Shared Network AWS Account (Account B)
+│   ├── security/                    # Security AWS Account (Account A)
+│
+├── modules/                         # Reusable Terraform Modules
+│   ├── networking/                   # VPC, Subnets, Transit Gateway
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   ├── compute/                      # EC2, ASG, Lambda, etc.
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   ├── security/                     # IAM, Security Groups, Policies
+│   ├── s3/                            # S3 Buckets for Logging, Backups
+

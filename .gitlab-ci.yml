@@ -1,0 +1,211 @@
+image:
+  name: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+variables:
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  TF_VAR_public_key: ${CI_SECRET_PUBLIC_KEY}  # The public key you want to upload to AWS
+
+before_script:
+  - terraform --version
+
+stages:
+  - vpc
+  - sg
+  - iam
+  - vm
+
+# --------------------------------------
+# VPC STAGE
+# --------------------------------------
+
+plan-vpc:
+  stage: vpc
+  before_script:
+    - cd environments/dev/vpc/
+    - terraform init
+  script:
+    - terraform plan -out "vpc-tfplanfile"
+    - ls
+    - pwd
+  artifacts:
+    paths:
+      - environments/dev/vpc/vpc-tfplanfile
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never  # Prevent running on merge request creation
+    - if: '$CI_COMMIT_BRANCH == "main"'  # Run only when merged
+
+apply-vpc:
+  stage: vpc
+  before_script:
+    - cd environments/dev/vpc/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform apply -input=false "vpc-tfplanfile"
+  needs:
+    - plan-vpc
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+destroy-vpc:
+  stage: vpc
+  before_script:
+    - cd environments/dev/vpc/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform destroy --auto-approve
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# --------------------------------------
+# SECURITY GROUPS (SG) STAGE
+# ---------------------------------------
+
+plan-sg:
+  stage: sg
+  before_script:
+    - cd environments/dev/security_groups/
+    - terraform init
+  script:
+    - terraform plan -out "sg-tfplanfile"
+    - ls
+    - pwd
+  needs:
+    - apply-vpc
+  artifacts:
+    paths:
+      - environments/dev/security_groups/sg-tfplanfile
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+apply-sg:
+  stage: sg
+  before_script:
+    - cd environments/dev/security_groups/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform apply -input=false "sg-tfplanfile"
+  needs:
+    - plan-sg
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+destroy-sg:
+  stage: sg
+  before_script:
+    - cd environments/dev/security_groups/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform destroy --auto-approve
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# --------------------------------------
+# IAM STAGE
+# --------------------------------------
+
+plan-iam:
+  stage: iam
+  before_script:
+    - cd environments/dev/iam/
+    - terraform init
+  script:
+    - terraform plan -out "iam-tfplanfile"
+  artifacts:
+    paths:
+      - environments/dev/iam/iam-tfplanfile
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+apply-iam:
+  stage: iam
+  before_script:
+    - cd environments/dev/iam/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform apply -input=false "iam-tfplanfile"
+  needs:
+    - plan-iam
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+destroy-iam:
+  stage: iam
+  before_script:
+    - cd environments/dev/iam/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform destroy --auto-approve
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# --------------------------------------
+# VM STAGE
+# --------------------------------------
+
+plan-vm:
+  stage: vm
+  before_script:
+    - cd environments/dev/vm/
+    - terraform init
+  script:
+    - terraform plan -out "vm-tfplanfile"
+  needs:
+    - apply-vpc
+    - apply-sg
+    - apply-iam
+  artifacts:
+    paths:
+      - environments/dev/vm/vm-tfplanfile
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+apply-vm:
+  stage: vm
+  before_script:
+    - cd environments/dev/vm/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform apply -input=false "vm-tfplanfile"
+  needs:
+    - plan-vm
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+destroy-vm:
+  stage: vm
+  before_script:
+    - cd environments/dev/vm/
+    - terraform init 
+    - ls
+    - pwd
+  script:
+    - terraform destroy --auto-approve
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
