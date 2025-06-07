@@ -1,0 +1,276 @@
+name: Terraform CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Enables manual trigger
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  TF_VAR_public_key: ${{ secrets.CI_SECRET_PUBLIC_KEY }}
+
+jobs:
+  # ----------------------
+  # VPC STAGE
+  # ----------------------
+
+  plan-vpc:
+    name: Plan VPC
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/vpc
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: environments/dev/vpc
+        run: terraform plan -out vpc-tfplanfile
+
+      - name: List files
+        working-directory: environments/dev/vpc
+        run: |
+          ls
+          pwd
+
+      - name: Upload VPC plan artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vpc-tfplanfile
+          path: environments/dev/vpc/vpc-tfplanfile
+
+  apply-vpc:
+    name: Apply VPC
+    runs-on: self-hosted
+    needs: plan-vpc
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download VPC plan artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: vpc-tfplanfile
+          path: environments/dev/vpc
+
+      - name: Terraform Init
+        working-directory: environments/dev/vpc
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: environments/dev/vpc
+        run: terraform apply -input=false vpc-tfplanfile
+    # Manual trigger for apply is achieved via workflow_dispatch (run manually)
+
+  destroy-vpc:
+    name: Destroy VPC
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/vpc
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: environments/dev/vpc
+        run: terraform destroy --auto-approve
+    # Manual trigger via workflow_dispatch with inputs (if desired)
+
+  # ----------------------
+  # SECURITY GROUPS (SG) STAGE
+  # ----------------------
+
+  plan-sg:
+    name: Plan Security Groups
+    runs-on: self-hosted
+    needs: apply-vpc
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/security_groups
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: environments/dev/security_groups
+        run: terraform plan -out sg-tfplanfile
+
+      - name: List files
+        working-directory: environments/dev/security_groups
+        run: |
+          ls
+          pwd
+
+      - name: Upload SG plan artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sg-tfplanfile
+          path: environments/dev/security_groups/sg-tfplanfile
+
+  apply-sg:
+    name: Apply Security Groups
+    runs-on: self-hosted
+    needs: plan-sg
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download SG plan artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: sg-tfplanfile
+          path: environments/dev/security_groups
+
+      - name: Terraform Init
+        working-directory: environments/dev/security_groups
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: environments/dev/security_groups
+        run: terraform apply -input=false sg-tfplanfile
+
+  destroy-sg:
+    name: Destroy Security Groups
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/security_groups
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: environments/dev/security_groups
+        run: terraform destroy --auto-approve
+
+  # ----------------------
+  # IAM STAGE
+  # ----------------------
+
+  plan-iam:
+    name: Plan IAM
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/iam
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: environments/dev/iam
+        run: terraform plan -out iam-tfplanfile
+
+      - name: Upload IAM plan artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: iam-tfplanfile
+          path: environments/dev/iam/iam-tfplanfile
+
+  apply-iam:
+    name: Apply IAM
+    runs-on: self-hosted
+    needs: plan-iam
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download IAM plan artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: iam-tfplanfile
+          path: environments/dev/iam
+
+      - name: Terraform Init
+        working-directory: environments/dev/iam
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: environments/dev/iam
+        run: terraform apply -input=false iam-tfplanfile
+
+  destroy-iam:
+    name: Destroy IAM
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/iam
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: environments/dev/iam
+        run: terraform destroy --auto-approve
+
+  # ----------------------
+  # VM STAGE
+  # ----------------------
+
+  plan-vm:
+    name: Plan VM
+    runs-on: self-hosted
+    needs:
+      - apply-vpc
+      - apply-sg
+      - apply-iam
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/vm
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: environments/dev/vm
+        run: terraform plan -out vm-tfplanfile
+
+      - name: Upload VM plan artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vm-tfplanfile
+          path: environments/dev/vm/vm-tfplanfile
+
+  apply-vm:
+    name: Apply VM
+    runs-on: self-hosted
+    needs: plan-vm
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download VM plan artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: vm-tfplanfile
+          path: environments/dev/vm
+
+      - name: Terraform Init
+        working-directory: environments/dev/vm
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: environments/dev/vm
+        run: terraform apply -input=false vm-tfplanfile
+
+  destroy-vm:
+    name: Destroy VM
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Init
+        working-directory: environments/dev/vm
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: environments/dev/vm
+        run: terraform destroy --auto-approve

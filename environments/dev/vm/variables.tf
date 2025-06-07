@@ -13,6 +13,12 @@ variable "instance_type" {
   type        = string
 }
 
+
+variable "instance_type_ansible" {
+  description = "Instance type for Ansible server"
+  type        = string
+}
+
 variable "public_key" {
   description = "SSH Public Key Content"
   type        = string

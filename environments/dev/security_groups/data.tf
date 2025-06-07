@@ -10,9 +10,8 @@ data "terraform_remote_state" "vpc" { ### if using s3 bucket as backend
   backend = "s3"
 
   config = {
-    bucket         = "dev-tfstatefile-031825"
+    bucket         = "dev-tfstatefile-2025"
     key            = "dev/vpc.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "dev_terraform_state_lock"
   }
 }
