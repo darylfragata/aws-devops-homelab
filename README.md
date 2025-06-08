@@ -1,6 +1,8 @@
 # AWS DevOps Homelab Infrastructure with Terraform
 
-This Terraform project automates the provisioning of my AWS homelab environment, covering core components such as VPC, IAM roles, security groups, S3 buckets, and EC2 virtual machines.
+This project automates the provisioning of my AWS homelab environment using **Terraform** and **GitHub Actions**. It covers core AWS resources like VPC, IAM roles, security groups, S3 buckets, and EC2 instances.
+
+Currently, it’s tailored for personal use but can be adapted for other setups.
 
 ## Background
 
@@ -87,6 +89,12 @@ If you prefer running Terraform manually for testing or development, you can:
 * Expand and reuse modules in `modules/` for consistent resource creation.
 * Ensure your AWS credentials are configured on your local machine or securely via GitHub Secrets when using workflows.
 
+## Future Plans
+
+- Add Ansible for configuration management
+- Investigate setting up monitoring with Grafana and Prometheus 
+- Plan to expand to hybrid cloud environments  
+- Support additional AWS services like RDS and Lambda
 
 ## Contribution
 
