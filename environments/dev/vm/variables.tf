@@ -3,12 +3,22 @@ variable "dev_region" {
   default     = "us-east-1"
 }
 
-variable "byol_ami" {
+variable "ubuntu_ami" {
   description = "AMI ID for the instance"
   type        = string
 }
 
-variable "instance_type" {
+variable "rhel_ami" {
+  description = "AMI ID for the instance"
+  type        = string
+}
+
+variable "instance_type_app" {
+  description = "Instance type"
+  type        = string
+}
+
+variable "instance_type_db" {
   description = "Instance type"
   type        = string
 }

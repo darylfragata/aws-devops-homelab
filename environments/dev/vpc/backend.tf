@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket         = "homelab-tfstatefile-2025"
+    bucket         = "homelab-tfstatefile-2025-1"
     key            = "dev/vpc.tfstate"
     region         = "us-east-1"
     encrypt = true
